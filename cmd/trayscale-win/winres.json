@@ -1,0 +1,14 @@
+{
+  "RT_GROUP_ICON": {
+    "#1": {
+      "0000": [
+        "../../dev.deedles.Trayscale.png"
+      ]
+    }
+  },
+  "RT_MANIFEST": {
+    "#1": {
+      "0409": "app.manifest"
+    }
+  }
+}

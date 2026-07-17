@@ -7,6 +7,12 @@ import (
 	"io"
 	"log/slog"
 	"net/netip"
+	"os"
+	"os/exec"
+	"regexp"
+	"runtime"
+	"strconv"
+	"strings"
 	"time"
 
 	"tailscale.com/client/local"
@@ -281,4 +287,77 @@ func SwitchProfile(ctx context.Context, id ipn.ProfileID) error {
 
 func StartLogin(ctx context.Context) error {
 	return localClient.StartLoginInteractive(ctx)
+}
+
+// Ping pings a peer at the given Tailscale IP and returns the result, including
+// the round-trip latency and whether the connection was direct or via DERP.
+func Ping(ctx context.Context, ip netip.Addr, pingType tailcfg.PingType) (*ipnstate.PingResult, error) {
+	return localClient.Ping(ctx, ip, pingType)
+}
+
+// PingReport is the parsed result of a single ping.
+type PingReport struct {
+	LatencyMs float64
+	Direct    bool   // true if a direct (non-DERP) path was used
+	Relay     string // DERP region code if relayed, else ""
+}
+
+var pingLatencyRe = regexp.MustCompile(`in ([0-9.]+)\s*ms`)
+
+func tailscaleExe() string {
+	if p, err := exec.LookPath("tailscale"); err == nil {
+		return p
+	}
+	if runtime.GOOS == "windows" {
+		for _, p := range []string{
+			`C:\Program Files\Tailscale\tailscale.exe`,
+			`C:\Program Files (x86)\Tailscale\tailscale.exe`,
+		} {
+			if _, err := os.Stat(p); err == nil {
+				return p
+			}
+		}
+	}
+	return "tailscale"
+}
+
+// PingOnce pings a peer once by shelling out to the tailscale CLI in a fresh
+// process. The in-process LocalAPI ping can wedge in this long-lived app (it
+// times out even on a dedicated client) while a fresh CLI process is reliable,
+// so this is the robust path for the live ping graph.
+func PingOnce(ctx context.Context, ip netip.Addr) (PingReport, error) {
+	// --until-direct=false returns on the first pong (fast, ~1s) instead of
+	// waiting up to ~15s to negotiate a direct path — matching the macOS live
+	// ping, which shows DERP-relayed first and upgrades to Direct as it warms up.
+	cmd := exec.CommandContext(ctx, tailscaleExe(), "ping", "--c", "1", "--until-direct=false", "--timeout", "6s", ip.String())
+	hideCmdWindow(cmd)
+	out, err := cmd.CombinedOutput()
+	line := strings.TrimSpace(string(out))
+	if i := strings.IndexByte(line, '\n'); i >= 0 {
+		line = strings.TrimSpace(line[:i])
+	}
+	if !strings.Contains(line, "pong") {
+		if line == "" {
+			if err != nil {
+				return PingReport{}, err
+			}
+			return PingReport{}, fmt.Errorf("no response")
+		}
+		return PingReport{}, fmt.Errorf("%s", line)
+	}
+	m := pingLatencyRe.FindStringSubmatch(line)
+	if m == nil {
+		return PingReport{}, fmt.Errorf("%s", line)
+	}
+	ms, _ := strconv.ParseFloat(m[1], 64)
+	rep := PingReport{LatencyMs: ms}
+	if i := strings.Index(line, "via DERP("); i >= 0 {
+		rest := line[i+len("via DERP("):]
+		if j := strings.IndexByte(rest, ')'); j >= 0 {
+			rep.Relay = rest[:j]
+		}
+	} else {
+		rep.Direct = true
+	}
+	return rep, nil
 }

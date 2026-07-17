@@ -1,2 +1,6 @@
 gschemas.compiled
 /trayscale
+
+# Windows build outputs
+dist/
+icon.ico

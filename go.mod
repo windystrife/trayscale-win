@@ -6,23 +6,27 @@ require (
 	deedles.dev/mk v0.1.0
 	deedles.dev/tray v0.1.11-0.20251126205835-30c3ecc68b10
 	deedles.dev/xiter v0.2.1
+	fyne.io/systray v1.12.2
+	gioui.org v0.10.1
+	github.com/Kodeworks/golang-image-ico v0.0.0-20141118225523-73f0f4cfade9
+	github.com/atotto/clipboard v0.1.4
 	github.com/diamondburned/gotk4-adwaita/pkg v0.0.0-20250703085337-e94555b846b6
 	github.com/diamondburned/gotk4/pkg v0.3.2-0.20250703063411-16654385f59a
 	github.com/inhies/go-bytesize v0.0.0-20220417184213-4913239db9cf
 	github.com/klauspost/compress v1.19.0
 	github.com/stretchr/testify v1.11.1
+	golang.org/x/image v0.44.0
+	golang.org/x/sys v0.47.0
 	tailscale.com v1.100.0
 )
 
 require (
 	filippo.io/edwards25519 v1.2.0 // indirect
-	fyne.io/systray v1.12.2 // indirect
+	gioui.org/shader v1.0.8 // indirect
 	github.com/BurntSushi/toml v1.5.0 // indirect
 	github.com/KarpelesLab/weak v0.1.1 // indirect
-	github.com/Kodeworks/golang-image-ico v0.0.0-20141118225523-73f0f4cfade9 // indirect
 	github.com/akutz/memconn v0.1.0 // indirect
 	github.com/alexbrainman/sspi v0.0.0-20250919150558-7d374ff0d59e // indirect
-	github.com/atotto/clipboard v0.1.4 // indirect
 	github.com/aws/aws-sdk-go-v2 v1.42.1 // indirect
 	github.com/aws/aws-sdk-go-v2/config v1.32.29 // indirect
 	github.com/aws/aws-sdk-go-v2/credentials v1.19.28 // indirect
@@ -47,6 +51,7 @@ require (
 	github.com/fxamacker/cbor/v2 v2.9.2 // indirect
 	github.com/gaissmai/bart v0.28.0 // indirect
 	github.com/go-json-experiment/json v0.0.0-20260623181947-01eb4420fa68 // indirect
+	github.com/go-text/typesetting v0.3.4 // indirect
 	github.com/godbus/dbus/v5 v5.2.2 // indirect
 	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0 // indirect
 	github.com/golang/groupcache v0.0.0-20241129210726-2c02b8208cf8 // indirect
@@ -82,13 +87,12 @@ require (
 	go4.org/unsafe/assume-no-moving-gc v0.0.0-20231121144256-b99613f794b6 // indirect
 	golang.org/x/crypto v0.54.0 // indirect
 	golang.org/x/exp v0.0.0-20260709172345-9ea1abe57597 // indirect
+	golang.org/x/exp/shiny v0.0.0-20250408133849-7e4ce0ab07d0 // indirect
 	golang.org/x/exp/typeparams v0.0.0-20250305212735-054e65f0b394 // indirect
-	golang.org/x/image v0.44.0 // indirect
 	golang.org/x/mod v0.38.0 // indirect
 	golang.org/x/net v0.57.0 // indirect
 	golang.org/x/oauth2 v0.36.0 // indirect
 	golang.org/x/sync v0.22.0 // indirect
-	golang.org/x/sys v0.47.0 // indirect
 	golang.org/x/term v0.45.0 // indirect
 	golang.org/x/text v0.40.0 // indirect
 	golang.org/x/time v0.15.0 // indirect
