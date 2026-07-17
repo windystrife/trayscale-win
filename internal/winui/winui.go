@@ -47,21 +47,22 @@ func rgb(v uint32) color.NRGBA {
 }
 
 var (
-	colBg      = rgb(0xF6F5F4)
-	colCard    = rgb(0xFFFFFF)
-	colBorder  = rgb(0xDCDAD7)
-	colText    = rgb(0x2A2A2A)
-	colSub     = rgb(0x8C8C8C)
-	colPink    = rgb(0xE0338A)
-	colGreen   = rgb(0x5AC85A)
-	colRed     = rgb(0xE8736F)
-	colBlue    = rgb(0x5B9BD5)
-	colYellow  = rgb(0xF2C744)
-	colWhite   = rgb(0xFFFFFF)
-	colSel     = rgb(0xEDEBFA)
-	colHeaderB = rgb(0xEFEDEB)
-	colOrange  = rgb(0xE8730F)
-	colLine    = rgb(0x3B7DED)
+	colBg         = rgb(0xF6F5F4)
+	colCard       = rgb(0xFFFFFF)
+	colBorder     = rgb(0xDCDAD7)
+	colText       = rgb(0x2A2A2A)
+	colSub        = rgb(0x8C8C8C)
+	colPink       = rgb(0xE0338A)
+	colGreen      = rgb(0x5AC85A)
+	colRed        = rgb(0xE8736F)
+	colBlue       = rgb(0x5B9BD5)
+	colYellow     = rgb(0xF2C744)
+	colWhite      = rgb(0xFFFFFF)
+	colSel        = rgb(0xEDEBFA)
+	colHeaderB    = rgb(0xEFEDEB)
+	colOrange     = rgb(0xE8730F)
+	colLine       = rgb(0x3B7DED)
+	colOfflineDot = rgb(0xB0B4B9)
 )
 
 // Run opens the window and blocks until it is closed or ctx is cancelled.
@@ -504,28 +505,31 @@ func (u *ui) layoutSidebarRow(gtx layout.Context, it *sbItem, selected bool) lay
 		}),
 		layout.Stacked(func(gtx layout.Context) layout.Dimensions {
 			gtx.Constraints.Min.X = gtx.Constraints.Max.X
-			return layout.Inset{Top: 7, Bottom: 7, Left: 10, Right: 10}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-				return layout.Flex{Axis: layout.Horizontal, Alignment: layout.Middle}.Layout(gtx,
-					layout.Rigid(func(gtx layout.Context) layout.Dimensions { return u.avatar(gtx, it.avatar, it.glyph) }),
-					layout.Rigid(layout.Spacer{Width: 12}.Layout),
-					layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
-						return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
-							layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			return layout.Inset{Top: 8, Bottom: 8, Left: 14, Right: 10}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+				return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
+					// macOS-style: a small online dot inline with the name.
+					layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+						return layout.Flex{Axis: layout.Horizontal, Alignment: layout.Middle}.Layout(gtx,
+							layout.Rigid(func(gtx layout.Context) layout.Dimensions { return u.statusDot(gtx, it.online) }),
+							layout.Rigid(layout.Spacer{Width: 9}.Layout),
+							layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
 								l := material.Body1(u.th, it.name)
 								l.MaxLines = 1
 								l.Font.Weight = font.Medium
 								return l.Layout(gtx)
 							}),
-							layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-								if it.sub == "" {
-									return layout.Dimensions{}
-								}
-								l := material.Caption(u.th, it.sub)
-								l.Color = colSub
-								l.MaxLines = 1
-								return l.Layout(gtx)
-							}),
 						)
+					}),
+					layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+						if it.sub == "" {
+							return layout.Dimensions{}
+						}
+						return layout.Inset{Top: 1}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+							l := material.Caption(u.th, it.sub)
+							l.Color = colSub
+							l.MaxLines = 1
+							return l.Layout(gtx)
+						})
 					}),
 				)
 			})
@@ -1612,6 +1616,20 @@ func (u *ui) runNetCheck() {
 }
 
 // --- small widgets --------------------------------------------------------
+
+// statusDot draws a small macOS-style presence dot: green when online, grey
+// when offline.
+func (u *ui) statusDot(gtx layout.Context, online bool) layout.Dimensions {
+	sz := gtx.Dp(10)
+	col := colOfflineDot
+	if online {
+		col = colGreen
+	}
+	defer clip.Ellipse{Max: image.Pt(sz, sz)}.Push(gtx.Ops).Pop()
+	paint.ColorOp{Color: col}.Add(gtx.Ops)
+	paint.PaintOp{}.Add(gtx.Ops)
+	return layout.Dimensions{Size: image.Pt(sz, sz)}
+}
 
 func (u *ui) avatar(gtx layout.Context, bg color.NRGBA, glyph string) layout.Dimensions {
 	sz := gtx.Dp(34)
