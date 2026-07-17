@@ -1,71 +1,106 @@
-Trayscale
-=========
+Trayscale for Windows
+=====================
 
-[![Go Report Card](https://goreportcard.com/badge/deedles.dev/trayscale)](https://goreportcard.com/report/deedles.dev/trayscale)
+A native **Windows** port of [Trayscale](https://github.com/DeedleFake/trayscale) —
+an unofficial GUI for the [Tailscale](https://tailscale.com) daemon.
 
-Trayscale is an unofficial GUI interface for the Tailscale daemon particularly for use on Linux, as no official Linux GUI client exists. It provides a basic system tray icon and a fairly comprehensive UI with support for many of Tailscale's features.
+The upstream project is a GTK4/libadwaita app for Linux and doesn't run on
+Windows. This port keeps Trayscale's cross-platform core (`internal/tsutil`,
+which talks to the Tailscale LocalAPI) and re-implements the UI with **pure-Go**
+toolkits — **no CGO, no GTK, no MSYS2** — while adding the niceties of the
+official **macOS** client.
 
-_Disclaimer: This project is in a beta state. There may still be undiscovered bugs or compatibility issues. Use at your own risk._
+> Not affiliated with Tailscale Inc. or the upstream Trayscale project. Built on
+> top of [DeedleFake/trayscale](https://github.com/DeedleFake/trayscale) (see
+> [LICENSE](LICENSE)).
 
-![screenshot](https://github.com/user-attachments/assets/4f66b16d-0d6c-4dde-86d3-ecc9af6ea05e)
+Screenshots
+-----------
 
-Tailscale Config
-----------------
+| Devices | Live ping | Exit nodes |
+|:---:|:---:|:---:|
+| ![Devices](docs/screenshot-devices.png) | ![Ping](docs/screenshot-ping.png) | ![Exit nodes](docs/screenshot-exit-nodes.png) |
 
-Trayscale interfaces with the Tailscale daemon, `tailscaled`, to perform many of its operations. In order for this to work, the daemon must have been configured with the current user as the "operator". To do this, run `sudo tailscale set --operator=$USER` from the command-line at least once manually.
+*(Other users' names are blurred for privacy.)*
 
-Installation
+Features
+--------
+
+Two independent editions, both pure Go and sharing the same core:
+
+### `Trayscale-GUI.exe` — full window (Gio)
+
+* A left **nav rail** with **Devices** and **Exit Nodes** views.
+* A **searchable sidebar** with machines **grouped by owner** (login name), each
+  group showing an **online count**, and a small **green/grey presence dot** next
+  to every device — just like the macOS client.
+* A per-machine **detail pane**:
+  * **Tailscale addresses** — MagicDNS, IPv4, IPv6, each with a **Copy** button.
+  * **Options** (this machine) — advertise exit node, allow LAN access, accept
+    routes, accept DNS, with descriptions.
+  * **Taildrop** — send a file to a device.
+  * **Ping** — a live, macOS-style latency graph with **Direct** / **DERP-relayed**
+    connection type, auto-scaled axis, and Start/Stop.
+  * **Files**, **Advertised Routes** (add/remove), **Network Check**, and
+    **Details** (OS, key expiry, created, last seen).
+* An **Exit Nodes** view to pick/clear your exit node and toggle LAN access.
+* **Connect / Disconnect** and the current exit node in the header.
+
+### `Trayscale.exe` — system tray
+
+A tray icon (color-coded by state) with a menu: connect/disconnect, exit-node
+picker, option toggles, peer list with copy-IP, and the admin console.
+
+Requirements
 ------------
 
-<a href='https://flathub.org/apps/details/dev.deedles.Trayscale'><img width='240' alt='Download on Flathub' src='https://flathub.org/assets/badges/flathub-badge-en.svg'/></a>
+* Windows 10 / 11 (x64).
+* The official **Tailscale for Windows** installed and signed in — the app talks
+  to the running `tailscaled` service over its LocalAPI as the current user.
+  Download: <https://tailscale.com/download/windows>.
 
-Note that the above config note about the current user being designated as an "operator" still applies to the Flatpak version of this app. However, the `tailscale` client is bundled into the Flatpak and thus does _not_ need to be in your `$PATH`.
+Download & run
+--------------
 
-### AUR
+Grab a build from [Releases](../../releases) (or build it yourself, below) and
+double-click **`Trayscale-GUI.exe`** for the window, or **`Trayscale.exe`** for
+the tray icon. No install needed.
 
-If you are on Arch Linux or a derivative, [Trayscale is available from the AUR](https://aur.archlinux.org/packages/trayscale).
+To start it with Windows, drop a shortcut in your Startup folder — see
+[README-Windows.md](README-Windows.md).
 
-### Manual
+Build from source
+-----------------
 
-First, make sure that you have dependencies installed:
+Requires **Go >= 1.26.5**. From the repo root:
 
-* Go >= 1.24
-* GTK >= 4.0
-* Libadwaita >= 1.6
-
-The main Trayscale binary can be installed with `go install`:
-
-```bash
-$ go install deedles.dev/trayscale/cmd/trayscale@latest
+```powershell
+powershell -ExecutionPolicy Bypass -File .\build-windows.ps1
 ```
 
-If you would like, you can also copy the `.desktop` file, the icon, and other pieces of extra metadata into the places that they need to be put to function properly:
+This produces `dist\Trayscale-GUI.exe` and `dist\Trayscale.exe`. It also
+embeds each executable's Windows manifest + icon via
+[`go-winres`](https://github.com/tc-hib/go-winres); the manifest's `supportedOS`
+block is **required** or tailscale.com's version detection panics with
+*"incoherent Windows version"*.
 
-* `dev.deedles-trayscale.desktop` -> `$HOME/.local/share/applications/`
-* `dev.deedles.Trayscale.png` -> `$HOME/.local/share/icons/hicolor/256x256/apps/`
+See [README-Windows.md](README-Windows.md) for the full build/usage notes and the
+list of Windows-specific packages (`cmd/trayscale-gui`, `internal/winui`,
+`cmd/trayscale-win`, `internal/wintray`).
 
-Note that without copying both of these files into the correct locations, notifications will likely not function correctly in GNOME. Also keep in mind that if the `trayscale` binary is not in your `$PATH` in a way that the desktop environment can locate then the `.desktop` file will not be considered valid. If this is an issue, modify the file manually and change the `Exec=` line to point directly to the binary with an absolute path.
+How the live ping works
+-----------------------
 
-### macOS
+The ping graph shells out to `tailscale ping --until-direct=false` in a fresh
+process each sample. The in-process LocalAPI ping can wedge inside this
+long-lived app (it times out even on a dedicated client), while a fresh CLI
+process is reliable and fast (~1 s), reporting DERP first and upgrading to Direct
+as the path warms up.
 
-First of all, please note that macOS support is not maintained or tested by the primary developer of Trayscale. Also note that the tray icon will _not_ work in macOS.
+Credits & license
+-----------------
 
-The simplest way to install Trayscale on macOS is via [Nixpkgs' unstable channel](https://search.nixos.org/packages?channel=unstable&query=trayscale). Note that it will need to be built from source if a binary cache is unavailable and the build can take some time.
-
-To build it locally without Nix, first make sure that you have installed the Go compiler, as well as necessary dependencies. The dependencies are available as the following Homebrew packages:
-* `libadwaita`
-* `gtk4`
-* `gobject-introspection`
-* `harfbuzz`
-
-Then, run the following in the root of the repository:
-
-```
-$ ./dist.sh build
-$ ./dist.sh install-macos
-```
-
-Donate
-------
-
-<a href="https://www.buymeacoffee.com/DeedleFake" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-green.png" alt="Buy Me A Coffee" style="height: 60px !important;width: 217px !important;" ></a>
+* Based on [Trayscale](https://github.com/DeedleFake/trayscale) by DeedleFake.
+* GUI built with [Gio](https://gioui.org); tray with
+  [fyne.io/systray](https://github.com/fyne-io/systray).
+* Same license as upstream — see [LICENSE](LICENSE).
